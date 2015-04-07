@@ -3644,7 +3644,10 @@ static int is_authorized_for_put(struct mg_connection *conn)
     const char *passfile = conn->ctx->config[PUT_DELETE_PASSWORDS_FILE];
     int ret = 0;
 
-    if (passfile != NULL && mg_fopen(conn, passfile, "r", &file)) {
+    // if not using a password file, allow put
+    if (passfile == NULL) {
+        return 1;
+    } else if (mg_fopen(conn, passfile, "r", &file)) {
         ret = authorize(conn, &file);
         mg_fclose(&file);
     }
