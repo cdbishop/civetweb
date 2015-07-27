@@ -7709,7 +7709,7 @@ mg_set_request_handler_type(struct mg_context *ctx,
                             mg_websocket_close_handler close_handler,
                             void *cbdata)
 {
-	struct mg_request_handler_info *tmp_rh, **lastref;
+	struct mg_request_handler_info *tmp_rh, **lastref = NULL, *insert_point = NULL, *prev = NULL;
 	size_t urilen = strlen(uri);
 
 	if (is_websocket_handler) {
@@ -7783,6 +7783,17 @@ mg_set_request_handler_type(struct mg_context *ctx,
 		return;
 	}
 
+	/* insert the handler so the list is sorted by longest uri first */
+	for (insert_point = ctx->request_handlers;  insert_point != NULL;
+		insert_point = insert_point->next) {
+		/* if this uri is longer than than tmp_rh, insert before */
+		if (strlen(uri) > strlen(insert_point->uri)) {
+			break;
+		}
+		/* store the previously check insert_point so we can update its next ptr for insertion */
+		prev = insert_point;
+	}
+
 	tmp_rh = (struct mg_request_handler_info *)mg_calloc(
 	    sizeof(struct mg_request_handler_info), 1);
 	if (tmp_rh == NULL) {
@@ -7808,9 +7819,22 @@ mg_set_request_handler_type(struct mg_context *ctx,
 	}
 	tmp_rh->cbdata = cbdata;
 	tmp_rh->is_websocket_handler = is_websocket_handler;
-	tmp_rh->next = NULL;
+	tmp_rh->next = insert_point;
 
-	*lastref = tmp_rh;
+        /* list should look like: prev -> tmp_rh -> insert_point
+         prev can be null, in which case we've inserted at the start
+         insert_point can be null in which case we've added to the end */
+
+        /* if no insertion, add to end */
+        if (insert_point == NULL && lastref) {
+		*lastref = tmp_rh;
+        }
+
+        /* if not inserting at begining update the prev->next to point to new element */
+        if (prev && insert_point && prev != insert_point) {
+		prev->next = tmp_rh;
+        }
+
 	mg_unlock_context(ctx);
 }
 
