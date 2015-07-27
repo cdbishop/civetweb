@@ -271,8 +271,10 @@ int main(int argc, char *argv[])
     /* HTTP site to open a websocket connection */
     mg_set_request_handler(ctx, "/websocket", WebSocketStartHandler, 0);
 
+#ifdef USE_WEBSOCKET
     /* WS site for the websocket connection */
     mg_set_websocket_handler(ctx, "/websocket", WebSocketConnectHandler, WebSocketReadyHandler, WebsocketDataHandler, WebSocketCloseHandler, 0);
+#endif
 
     printf("Browse files at http://localhost:%s/\n", PORT);
     printf("Run example at http://localhost:%s%s\n", PORT, EXAMPLE_URI);
